@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload X-Ray - LungPredict</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: url('/static/img1.jpg') no-repeat center center/cover;
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.7) 100%);
+            animation: pulseBackground 15s infinite alternate;
+            z-index: 0;
+        }
+        
+        @keyframes pulseBackground {
+            0% { opacity: 0.5; }
+            50% { opacity: 0.7; }
+            100% { opacity: 0.5; }
+        }
+        
+        .main-content {
+            position: relative;
+            z-index: 2;
+            padding-top: 5vh;
+        }
+        
+        .upload-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            animation: fadeInUp 1s forwards;
+        }
+        
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .upload-area:hover {
+            border-color: #1ba872;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .upload-area.active {
+            border-color: #1ba872;
+            background: rgba(27, 168, 114, 0.15);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.6);
+            transition: all 0.3s ease;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .upload-area:hover .upload-icon {
+            color: #1ba872;
+            transform: scale(1.1);
+        }
+        
+        .btn-continue {
+            background-color: #1ba872;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            opacity: 0;
+            animation: fadeIn 0.5s 1s forwards;
+        }
+        
+        .btn-continue:hover {
+            background-color: #0e20ad;
+            transform: scale(1.05);
+        }
+
+        .btn-back {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 30px;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: white;
+            margin-right: 10px;
+            opacity: 0;
+            animation: fadeIn 0.5s 1s forwards;
+        }
+        
+        .btn-back:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+            color: white;
+        }
+
+        .btn-remove-image {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 0, 0, 0.7);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.3s ease;
+            z-index: 3;
+        }
+
+        .btn-remove-image:hover {
+            background-color: rgba(255, 0, 0, 0.9);
+            transform: scale(1.1);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .progress-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #1ba872, #0e20ad);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 10px;
+            display: none;
+            margin-top: 20px;
+            animation: scaleIn 0.5s forwards;
+        }
+        
+        @keyframes scaleIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        .upload-success {
+            color: #1ba872;
+            margin-top: 15px;
+            display: none;
+            animation: fadeIn 0.5s forwards;
+        }
+        
+        #loading-animation {
+            display: none;
+            margin: 20px auto;
+        }
+        
+        .loading-circle {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin: 0 5px;
+            border-radius: 50%;
+            background-color: #1ba872;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        
+        .loading-circle:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+        
+        .loading-circle:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(0.5); opacity: 0.5; }
+            50% { transform: scale(1); opacity: 1; }
+        }
+        
+        .upload-methods {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .upload-method {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-method:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .image-preview-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container main-content d-flex justify-content-center align-items-center min-vh-100">
+        <div class="row w-100 justify-content-center">
+            <div class="col-md-8">
+                <div class="upload-card p-4 p-md-5">
+                    <h2 class="text-center mb-4">Upload X-Ray Image</h2>
+                    
+                    <form id="upload-form" action="/process_image" method="POST" enctype="multipart/form-data">
+                        <!-- Hidden fields to carry over user details -->
+                        <input type="hidden" id="name" name="name" value="{{ name }}">
+                        <input type="hidden" id="age" name="age" value="{{ age }}">
+                        <input type="hidden" id="gender" name="gender" value="{{ gender }}">
+                        
+                        <!-- Unified upload area -->
+                        <div class="upload-area mb-4" id="drop-area">
+                            <i class="bi bi-cloud-arrow-up upload-icon mb-3"></i>
+                            <h4>Upload Your X-Ray Image</h4>
+                            <p>Drag & drop your file here or click to browse</p>
+                            <div class="upload-methods">
+                                <div class="upload-method" id="file-upload-btn">
+                                    <i class="bi bi-laptop"></i> Browse
+                                </div>
+                            </div>
+                            <input type="file" id="file-input" name="image" accept="image/*" class="d-none">
+                        </div>
+                        
+                        <!-- Upload progress and preview -->
+                        <div id="upload-progress-container" class="mb-4" style="display: none;">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Uploading...</span>
+                                <span id="progress-percentage">0%</span>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar" id="upload-progress-bar"></div>
+                            </div>
+                        </div>
+                        
+                        <div id="loading-animation" class="text-center">
+                            <div class="loading-circle"></div>
+                            <div class="loading-circle"></div>
+                            <div class="loading-circle"></div>
+                        </div>
+                        
+                        <div id="image-preview-container" class="text-center" style="display: none;">
+                            <div class="image-preview-wrapper">
+                                <img src="" id="image-preview" class="image-preview">
+                                <button type="button" class="btn-remove-image" id="remove-image">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                            <div class="upload-success" id="upload-success-message">
+                                <i class="bi bi-check-circle-fill me-2"></i>Image uploaded successfully!
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <button type="button" class="btn btn-back" id="back-button">
+                                <i class="bi bi-arrow-left me-2"></i>Back
+                            </button>
+                            <button type="submit" class="btn btn-continue" id="continue-btn" disabled>Continue to Prediction</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('file-input');
+            const dropArea = document.getElementById('drop-area');
+            const fileUploadBtn = document.getElementById('file-upload-btn');
+            const backButton = document.getElementById('back-button');
+            const removeImageBtn = document.getElementById('remove-image');
+            
+            // Back button functionality
+backButton.addEventListener('click', function() {
+    window.location.href = '/user_details';
+});
+            
+            // Remove image button functionality
+            removeImageBtn.addEventListener('click', function() {
+                resetUploadArea();
+            });
+            
+            // Click on the button to trigger file input
+            fileUploadBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // Click on the drop area to trigger file input
+            dropArea.addEventListener('click', function(e) {
+                // Prevent click event if it's coming from the button
+                if (e.target !== fileUploadBtn && !fileUploadBtn.contains(e.target)) {
+                    fileInput.click();
+                }
+            });
+            
+            // Handle file select
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            // Highlight drop area when dragging over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            // Handle dropped files
+            dropArea.addEventListener('drop', handleDrop, false);
+
+            function resetUploadArea() {
+                // Reset file input
+                fileInput.value = '';
+                
+                // Hide preview and progress
+                document.getElementById('image-preview-container').style.display = 'none';
+                document.getElementById('upload-progress-container').style.display = 'none';
+                document.getElementById('loading-animation').style.display = 'none';
+                
+                // Reset progress bar
+                document.getElementById('upload-progress-bar').style.width = '0%';
+                document.getElementById('progress-percentage').textContent = '0%';
+                
+                // Show upload area
+                dropArea.style.display = 'block';
+                
+                // Disable continue button
+                document.getElementById('continue-btn').disabled = true;
+            }
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function highlight() {
+            document.getElementById('drop-area').classList.add('active');
+        }
+        
+        function unhighlight() {
+            document.getElementById('drop-area').classList.remove('active');
+        }
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        }
+        
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        }
+        
+        function handleFiles(files) {
+            const file = files[0];
+            
+            if (file && file.type.startsWith('image/')) {
+                // Show progress
+                document.getElementById('upload-progress-container').style.display = 'block';
+                
+                // Hide drop area
+                document.getElementById('drop-area').style.display = 'none';
+                
+                // Simulate upload progress
+                simulateUploadProgress(file);
+            } else {
+                alert('Please select a valid image file.');
+            }
+        }
+        
+        function simulateUploadProgress(file) {
+            let progress = 0;
+            const progressBar = document.getElementById('upload-progress-bar');
+            const progressPercentage = document.getElementById('progress-percentage');
+            const loadingAnimation = document.getElementById('loading-animation');
+            
+            loadingAnimation.style.display = 'block';
+            
+            const interval = setInterval(() => {
+                progress += 5;
+                progressBar.style.width = progress + '%';
+                progressPercentage.textContent = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    
+                    setTimeout(() => {
+                        loadingAnimation.style.display = 'none';
+                        showImagePreview(file);
+                    }, 500);
+                }
+            }, 100);
+        }
+        
+        function showImagePreview(file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const previewContainer = document.getElementById('image-preview-container');
+                const preview = document.getElementById('image-preview');
+                const successMessage = document.getElementById('upload-success-message');
+                const continueBtn = document.getElementById('continue-btn');
+                
+                // Set preview image
+                preview.src = e.target.result;
+                
+                // Show preview container
+                previewContainer.style.display = 'block';
+                
+                // Show preview image with animation
+                preview.style.display = 'block';
+                
+                // Show success message
+                successMessage.style.display = 'block';
+                
+                // Enable continue button
+                continueBtn.disabled = false;
+            };
+            
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About LungPredict</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: url('/static/img1.jpg') no-repeat center center/cover;
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.7) 100%);
+            animation: pulseBackground 15s infinite alternate;
+            z-index: 0;
+        }
+        
+        @keyframes pulseBackground {
+            0% { opacity: 0.5; }
+            50% { opacity: 0.7; }
+            100% { opacity: 0.5; }
+        }
+        
+        /* Animated particles */
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        .main-content {
+            position: relative;
+            z-index: 2;
+            padding-top: 5vh;
+        }
+        
+        .title-text {
+            font-size: 4rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            animation: slideDown 2s forwards;
+            background: linear-gradient(90deg, #ffffff, #e0e0e0, #ffffff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: 
+                slideDown 2s forwards,
+                gradient 5s infinite;
+        }
+        
+        @media (max-width: 768px) {
+            .title-text {
+                font-size: 2.5rem;
+            }
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-100%); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .about-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(5px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            animation: fadeInUp 1.5s 1s forwards;
+            margin-bottom: 30px;
+        }
+        
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .tech-icon {
+            font-size: 2.5rem;
+            opacity: 0;
+            animation: fadeIn 1s 2.5s forwards;
+        }
+        
+        .tech-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeInUp 1s forwards;
+        }
+        
+        .tech-box:nth-child(1) { animation-delay: 2.5s; }
+        .tech-box:nth-child(2) { animation-delay: 2.7s; }
+        .tech-box:nth-child(3) { animation-delay: 2.9s; }
+        .tech-box:nth-child(4) { animation-delay: 3.1s; }
+        
+        .model-diagram {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            animation: fadeInUp 1.5s 2s forwards;
+        }
+        
+        .navbar {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        
+        .navbar-nav .nav-link {
+            color: white;
+            margin: 0 10px;
+            position: relative;
+        }
+        
+        .navbar-nav .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 0;
+            background-color: #1ba872;
+            transition: width 0.3s;
+        }
+        
+        .navbar-nav .nav-link:hover::after {
+            width: 100%;
+        }
+        
+        footer {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 2;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .accuracy-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: conic-gradient(#1ba872 0% 96%, #f0f0f0 96% 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 0 auto;
+            animation: fadeIn 1s 2.5s forwards;
+            opacity: 0;
+        }
+        
+        .accuracy-circle::before {
+            content: "";
+            position: absolute;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        .accuracy-text {
+            position: relative;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .model-features li {
+            margin-bottom: 10px;
+            opacity: 0;
+        }
+        
+        .model-features li:nth-child(1) { animation: fadeIn 1s 2.6s forwards; }
+        .model-features li:nth-child(2) { animation: fadeIn 1s 2.7s forwards; }
+        .model-features li:nth-child(3) { animation: fadeIn 1s 2.8s forwards; }
+        .model-features li:nth-child(4) { animation: fadeIn 1s 2.9s forwards; }
+        .model-features li:nth-child(5) { animation: fadeIn 1s 3.0s forwards; }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    
+    <!-- Bootstrap Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">Lungs Disease Predict</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('about') }}">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">History</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('contact') }}">Contact</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container main-content mt-5 pt-5">
+        <div class="row text-center mb-5">
+            <div class="col-12">
+                <h1 class="title-text">About LungPredict</h1>
+            </div>
+        </div>
+        
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-10">
+                <div class="about-card p-4">
+                    <div class="card-body">
+                        <h2 class="text-center mb-4">Our Mission</h2>
+                        <p class="fs-5">LungPredict is a cutting-edge medical AI tool designed to assist healthcare professionals in quickly and accurately diagnosing respiratory conditions from chest X-ray images. Using advanced deep learning technology, our system can identify patterns associated with COVID-19, Viral Pneumonia, and normal lung conditions.</p>
+                        <p class="fs-5">Our mission is to make advanced medical diagnostics more accessible, efficient, and accurate to save lives through early detection and timely intervention.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-10">
+                <div class="about-card p-4">
+                    <div class="card-body">
+                        <h2 class="text-center mb-4">Our Technology</h2>
+                        <div class="row align-items-center mb-4">
+                            <div class="col-md-7">
+                                <h3 class="mb-3">EfficientNetB0 Neural Network</h3>
+                                <p>LungPredict uses Google's EfficientNetB0 architecture, a state-of-the-art convolutional neural network (CNN) specifically optimized for both accuracy and computational efficiency. This advanced model has been meticulously trained on thousands of verified chest X-ray images.</p>
+                                <ul class="model-features">
+                                    <li>Optimized to achieve high accuracy with fewer parameters</li>
+                                    <li>Utilizes compound scaling for balanced depth, width, and resolution</li>
+                                    <li>Enhanced feature extraction capabilities for medical imaging</li>
+                                    <li>Transfer learning from ImageNet weights for improved performance</li>
+                                    <li>Fine-tuned specifically for respiratory disease identification</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-5 text-center">
+                                <div class="accuracy-circle mb-2">
+                                    <span class="accuracy-text">96%</span>
+                                </div>
+                                <p>Model Accuracy</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="tech-box text-center">
+                            <i class="bi bi-filetype-py tech-icon text-info"></i>
+                            <h4 class="mt-3">Flask Backend</h4>
+                            <p>Lightweight, secure Python web framework powering our application with robust routing and session management.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="tech-box text-center">
+                            <i class="bi bi-gpu-card tech-icon text-danger"></i>
+                            <h4 class="mt-3">TensorFlow</h4>
+                            <p>Industry-leading machine learning framework supporting our advanced neural network architecture.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="tech-box text-center">
+                            <i class="bi bi-database tech-icon text-success"></i>
+                            <h4 class="mt-3">PostgreSQL</h4>
+                            <p>Enterprise-grade database for secure and reliable storage of diagnostic records and predictions.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="tech-box text-center">
+                            <i class="bi bi-bootstrap tech-icon text-warning"></i>
+                            <h4 class="mt-3">Bootstrap</h4>
+                            <p>Modern, responsive front-end framework ensuring a seamless user experience across all devices.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-10">
+                <div class="about-card p-4">
+                    <div class="card-body">
+                        <h2 class="text-center mb-4">How It Works</h2>
+                        <div class="row mb-4 justify-content-center">
+                            <div class="col-md-10">
+                                <ol class="fs-5">
+                                    <li class="mb-3">Upload a chest X-ray image through our secure interface</li>
+                                    <li class="mb-3">Our EfficientNetB0 model processes the image, extracting key features</li>
+                                    <li class="mb-3">The deep learning algorithm analyzes the patterns against trained datasets</li>
+                                    <li class="mb-3">Results are displayed showing prediction class and confidence level</li>
+                                    <li class="mb-3">All predictions are securely stored for future reference by healthcare providers</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2025 LungPredict. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+        
+    <!-- Custom JS -->
+    <script>
+        // Create floating particles
+        document.addEventListener('DOMContentLoaded', function() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 20;
+            
+            for (let i = 0; i < particleCount; i++) {
+                createParticle(particlesContainer);
+            }
+        });
+        
+        function createParticle(container) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            
+            // Random size between 3px and 8px
+            const size = Math.random() * 5 + 3;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            
+            // Random position
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            
+            // Random opacity
+            particle.style.opacity = Math.random() * 0.5 + 0.1;
+            
+            // Add to container
+            container.appendChild(particle);
+            
+            // Animate floating
+            animateParticle(particle);
+        }
+        
+        function animateParticle(particle) {
+            // Random duration between 15s and 30s
+            const duration = Math.random() * 15000 + 15000;
+            
+            // Random starting positions
+            const startX = parseFloat(particle.style.left);
+            const startY = parseFloat(particle.style.top);
+            
+            // Random movement range (small)
+            const rangeX = Math.random() * 10 - 5;
+            const rangeY = Math.random() * 10 - 5;
+            
+            let startTime = null;
+            
+            function float(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const progress = (timestamp - startTime) / duration;
+                
+                if (progress >= 1) {
+                    startTime = null;
+                    animateParticle(particle);
+                    return;
+                }
+                
+                // Sine wave movement
+                const x = startX + rangeX * Math.sin(progress * Math.PI * 2);
+                const y = startY + rangeY * Math.sin(progress * Math.PI * 2);
+                
+                particle.style.left = `${x}%`;
+                particle.style.top = `${y}%`;
+                
+                requestAnimationFrame(float);
+            }
+            
+            requestAnimationFrame(float);
+        }
+    </script>
+</body>
+</html>
