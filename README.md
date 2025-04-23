@@ -51,3 +51,11 @@ pip install -r requirements.txt
 python app.py
 ```
 
+The app will be hosted locally at:
+```
+ http://127.0.0.1:5000
+ ```
+
+ copy above link and past it on any browser
+
+
