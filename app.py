@@ -10,6 +10,12 @@ import datetime
 import psycopg2
 from psycopg2 import pool
 import functools
+import cloudinary
+import cloudinary.uploader
+from dotenv import load_dotenv
+import tempfile
+
+load_dotenv()
 
 app = Flask(__name__, 
             static_folder='static',  # Explicitly set static folder
@@ -18,19 +24,27 @@ app = Flask(__name__,
 # Set a secret key for session management
 app.secret_key = 'your_very_secure_secret_key_here'  # Change this to a random string in production
 
-# Temporary folder to store uploaded images
-UPLOAD_FOLDER = 'static/uploads/'
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.getenv('CLOUDINARY_API_KEY'),
+    api_secret=os.getenv('CLOUDINARY_API_SECRET'),
+    secure=True
+)
+
+# Temporary folder to store uploaded images (for processing only)
+UPLOAD_FOLDER = 'temp_uploads/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Ensure upload directory exists
+# Ensure temp directory exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs('static', exist_ok=True)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 # Define class labels
-
 class_names = ['COVID-19','NORMAL', 'PNEUMONIA']
+
 # Hard-coded admin credentials
 ADMIN_USERNAME = "kit"
 ADMIN_PASSWORD = "aiml"
@@ -87,8 +101,24 @@ def preprocess_image(image_path, img_size=(224, 224)):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# Function to upload image to Cloudinary
+def upload_to_cloudinary(file_path, filename):
+    try:
+        # Upload to Cloudinary with folder organization
+        response = cloudinary.uploader.upload(
+            file_path,
+            folder="Lungs X-ray Images",
+            public_id=f"xray_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename.split('.')[0]}",
+            resource_type="image",
+            overwrite=True
+        )
+        return response.get('secure_url')
+    except Exception as e:
+        print(f"Error uploading to Cloudinary: {e}")
+        return None
+
 # Function to save prediction to database
-def save_prediction(name, age, gender, prediction, disease_name, confidence, image_path):
+def save_prediction(name, age, gender, prediction, disease_name, confidence, image_url):
     conn = connection_pool.getconn()
     try:
         with conn.cursor() as cursor:
@@ -96,7 +126,7 @@ def save_prediction(name, age, gender, prediction, disease_name, confidence, ima
                 INSERT INTO predictions 
                 (name, age, gender, prediction_result, disease_name, confidence, image_path) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ''', (name, age, gender, prediction, disease_name, confidence, image_path))
+            ''', (name, age, gender, prediction, disease_name, confidence, image_url))
             conn.commit()
     except Exception as e:
         print(f"Error saving prediction: {e}")
@@ -121,6 +151,12 @@ def get_predictions():
                 prediction = dict(zip(columns, row))
                 # Convert the datetime object to string for template rendering
                 prediction['prediction_date'] = prediction['prediction_date'].strftime("%Y-%m-%d %H:%M")
+                
+                # Validate image URL - if missing or invalid, use placeholder
+                image_path = prediction.get('image_path', '')
+                if not image_path or not image_path.startswith(('http://', 'https://')):
+                    prediction['image_path'] = '/static/placeholder-xray.jpg'  # Default placeholder
+                
                 predictions.append(prediction)
     except Exception as e:
         print(f"Error retrieving predictions: {e}")
@@ -201,13 +237,15 @@ def process_image():
 
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+        
+        # Use temporary file for processing
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{filename.rsplit(".", 1)[1].lower()}') as temp_file:
+            file.save(temp_file.name)
+            temp_filepath = temp_file.name
 
-        # Real prediction logic using the deep learning model
         try:
-            # Preprocess the uploaded image
-            processed_image = preprocess_image(filepath)
+            # Preprocess the uploaded image for ML prediction
+            processed_image = preprocess_image(temp_filepath)
             
             # Make prediction
             prediction = model.predict(processed_image)
@@ -218,23 +256,32 @@ def process_image():
             # Determine positive/negative result
             prediction_result = "Positive" if disease_name != "NORMAL" else "Negative"
             
-            # Get relative image path for database storage
-            relative_image_path = f'/static/uploads/{filename}'
+            # Upload image to Cloudinary
+            cloudinary_url = upload_to_cloudinary(temp_filepath, filename)
             
-            # Save the prediction to database
+            # Clean up temporary file
+            os.unlink(temp_filepath)
+            
+            if not cloudinary_url:
+                return "Error uploading image to cloud storage", 500
+            
+            # Save the prediction to database with Cloudinary URL
             confidence_str = f"{confidence:.2f}%"
             save_prediction(name, int(age), gender, prediction_result, disease_name, 
-                           confidence_str, relative_image_path)
+                           confidence_str, cloudinary_url)
             
             return render_template('prediction.html', 
                                 name=name, 
                                 age=age, 
                                 gender=gender, 
-                                image_url=relative_image_path, 
+                                image_url=cloudinary_url, 
                                 prediction=prediction_result, 
                                 disease_name=disease_name,
                                 confidence=confidence_str)
         except Exception as e:
+            # Clean up temporary file in case of error
+            if os.path.exists(temp_filepath):
+                os.unlink(temp_filepath)
             return f"Error in prediction: {str(e)}", 500
 
     return "Invalid file format", 400
