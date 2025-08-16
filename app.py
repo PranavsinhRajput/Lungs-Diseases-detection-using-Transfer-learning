@@ -12,9 +12,10 @@ from psycopg2 import pool
 import functools
 import cloudinary
 import cloudinary.uploader
-from dotenv import load_dotenv
 import tempfile
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__, 
@@ -22,7 +23,7 @@ app = Flask(__name__,
             static_url_path='/static')
 
 # Set a secret key for session management
-app.secret_key = 'your_very_secure_secret_key_here'  # Change this to a random string in production
+app.secret_key = os.getenv('SECRET_KEY', 'your_very_secure_secret_key_here')
 
 # Configure Cloudinary
 cloudinary.config(
@@ -45,27 +46,38 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 # Define class labels
 class_names = ['COVID-19','NORMAL', 'PNEUMONIA']
 
-# Hard-coded admin credentials
-ADMIN_USERNAME = "kit"
-ADMIN_PASSWORD = "aiml"
+# Hard-coded admin credentials (you can move these to env vars too)
+ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'kit')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'aiml')
 
-# PostgreSQL Database Configuration
-# Replace these with your actual database credentials
-DB_HOST = "localhost"
-DB_PORT = "5432"
-DB_NAME = "lungpredict"
-DB_USER = "postgres"
-DB_PASSWORD = "aiml"
+# Render PostgreSQL Database Configuration
+DB_HOST = os.getenv('DB_HOST')
+DB_PORT = os.getenv('DB_PORT', '5432')
+DB_NAME = os.getenv('DB_NAME')
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
 
-# Create connection pool
-connection_pool = psycopg2.pool.SimpleConnectionPool(
-    1, 10,
-    host=DB_HOST,
-    port=DB_PORT,
-    database=DB_NAME,
-    user=DB_USER,
-    password=DB_PASSWORD
-)
+# Validate required environment variables
+required_env_vars = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD']
+missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+if missing_vars:
+    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+
+# Create connection pool for Render PostgreSQL
+try:
+    connection_pool = psycopg2.pool.SimpleConnectionPool(
+        1, 10,
+        host=DB_HOST,
+        port=DB_PORT,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        sslmode='require'  # Render requires SSL
+    )
+    print("✅ Successfully connected to Render PostgreSQL!")
+except Exception as e:
+    print(f"❌ Error connecting to database: {e}")
+    raise
 
 # Login required decorator
 def login_required(view):
@@ -76,14 +88,18 @@ def login_required(view):
         return view(**kwargs)
     return wrapped_view
 
-
 # Load the model at startup
 MODEL_PATH = "respiratory_disease_classifier.keras"
-model = load_model(MODEL_PATH, compile=False)
-model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
+try:
+    model = load_model(MODEL_PATH, compile=False)
+    model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
+    print("✅ ML Model loaded successfully!")
+except Exception as e:
+    print(f"❌ Error loading ML model: {e}")
+    raise
 
 def preprocess_image(image_path, img_size=(224, 224)):
-    # Load and preprocess the image
+    """Load and preprocess the image for ML prediction"""
     img = Image.open(image_path)
     
     # Ensure image is in RGB format
@@ -97,12 +113,12 @@ def preprocess_image(image_path, img_size=(224, 224)):
     
     return img_array
 
-# Function to check allowed file extensions
 def allowed_file(filename):
+    """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Function to upload image to Cloudinary
 def upload_to_cloudinary(file_path, filename):
+    """Upload image to Cloudinary and return secure URL"""
     try:
         # Upload to Cloudinary with folder organization
         response = cloudinary.uploader.upload(
@@ -117,10 +133,15 @@ def upload_to_cloudinary(file_path, filename):
         print(f"Error uploading to Cloudinary: {e}")
         return None
 
-# Function to save prediction to database
 def save_prediction(name, age, gender, prediction, disease_name, confidence, image_url):
-    conn = connection_pool.getconn()
+    """Save prediction result to Render PostgreSQL database"""
+    conn = None
     try:
+        # Check if connection pool is available
+        if not connection_pool or connection_pool.closed:
+            raise Exception("Database connection pool is not available")
+            
+        conn = connection_pool.getconn()
         with conn.cursor() as cursor:
             cursor.execute('''
                 INSERT INTO predictions 
@@ -128,17 +149,30 @@ def save_prediction(name, age, gender, prediction, disease_name, confidence, ima
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             ''', (name, age, gender, prediction, disease_name, confidence, image_url))
             conn.commit()
+            print(f"✅ Prediction saved for {name}")
     except Exception as e:
-        print(f"Error saving prediction: {e}")
-        conn.rollback()
+        print(f"❌ Error saving prediction: {e}")
+        if conn:
+            conn.rollback()
+        raise
     finally:
-        connection_pool.putconn(conn)
+        if conn:
+            try:
+                connection_pool.putconn(conn)
+            except:
+                pass  # Pool might be closed
 
-# Function to get all predictions from database
 def get_predictions():
-    conn = connection_pool.getconn()
+    """Get all predictions from Render PostgreSQL database"""
+    conn = None
     predictions = []
     try:
+        # Check if connection pool is available
+        if not connection_pool or connection_pool.closed:
+            print("❌ Database connection pool is not available")
+            return predictions
+            
+        conn = connection_pool.getconn()
         with conn.cursor() as cursor:
             cursor.execute('''
                 SELECT name, age, gender, prediction_result, disease_name, 
@@ -155,15 +189,20 @@ def get_predictions():
                 # Validate image URL - if missing or invalid, use placeholder
                 image_path = prediction.get('image_path', '')
                 if not image_path or not image_path.startswith(('http://', 'https://')):
-                    prediction['image_path'] = '/static/placeholder-xray.jpg'  # Default placeholder
+                    prediction['image_path'] = '/static/images/placeholder-xray.jpg'  # Default placeholder
                 
                 predictions.append(prediction)
     except Exception as e:
-        print(f"Error retrieving predictions: {e}")
+        print(f"❌ Error retrieving predictions: {e}")
     finally:
-        connection_pool.putconn(conn)
+        if conn:
+            try:
+                connection_pool.putconn(conn)
+            except:
+                pass  # Pool might be closed
     return predictions
 
+# Routes
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -197,10 +236,11 @@ def login():
         username = request.form['username']
         password = request.form['password']
         
-        # Check credentials against hardcoded values
+        # Check credentials against environment variables
         if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
             session['logged_in'] = True
             session['username'] = username
+            flash('Login successful!', 'success')
             return redirect(url_for('history'))
         else:
             error = 'Invalid username or password. Please try again.'
@@ -211,29 +251,46 @@ def login():
 def logout():
     session.pop('logged_in', None)
     session.pop('username', None)
+    flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
 
 @app.route('/history')
 @login_required
 def history():
-    # Get prediction history from database
-    history_data = get_predictions()
-    return render_template('history.html', history_data=history_data, username=session.get('username'))
+    """Display prediction history from Render PostgreSQL"""
+    try:
+        history_data = get_predictions()
+        return render_template('history.html', 
+                             history_data=history_data, 
+                             username=session.get('username'))
+    except Exception as e:
+        flash(f'Error loading history: {str(e)}', 'error')
+        return render_template('history.html', 
+                             history_data=[], 
+                             username=session.get('username'))
 
 @app.route('/process_image', methods=['POST'])
 def process_image():
+    """Process uploaded image, make ML prediction, upload to Cloudinary, save to Render PostgreSQL"""
     # Collect user details from hidden fields
     name = request.form.get('name')
     age = request.form.get('age')
     gender = request.form.get('gender')
 
+    # Validate user input
+    if not all([name, age, gender]):
+        flash('All user details are required.', 'error')
+        return redirect(url_for('user_details'))
+
     # Check if an image is uploaded
     if 'image' not in request.files:
-        return "No file uploaded", 400
+        flash('No file uploaded.', 'error')
+        return redirect(url_for('upload_image'), code=307)
     
     file = request.files['image']
     if file.filename == '':
-        return "No selected file", 400
+        flash('No file selected.', 'error')
+        return redirect(url_for('upload_image'), code=307)
 
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
@@ -247,7 +304,7 @@ def process_image():
             # Preprocess the uploaded image for ML prediction
             processed_image = preprocess_image(temp_filepath)
             
-            # Make prediction
+            # Make prediction using the ML model
             prediction = model.predict(processed_image)
             predicted_class_index = np.argmax(prediction[0])
             disease_name = class_names[predicted_class_index]
@@ -257,18 +314,24 @@ def process_image():
             prediction_result = "Positive" if disease_name != "NORMAL" else "Negative"
             
             # Upload image to Cloudinary
+            print(f"🔄 Uploading image to Cloudinary...")
             cloudinary_url = upload_to_cloudinary(temp_filepath, filename)
             
             # Clean up temporary file
             os.unlink(temp_filepath)
             
             if not cloudinary_url:
-                return "Error uploading image to cloud storage", 500
+                flash('Error uploading image to cloud storage. Please try again.', 'error')
+                return redirect(url_for('upload_image'), code=307)
             
-            # Save the prediction to database with Cloudinary URL
+            print(f"✅ Image uploaded to Cloudinary: {cloudinary_url}")
+            
+            # Save the prediction to Render PostgreSQL database
             confidence_str = f"{confidence:.2f}%"
             save_prediction(name, int(age), gender, prediction_result, disease_name, 
                            confidence_str, cloudinary_url)
+            
+            flash(f'Prediction completed! Result: {prediction_result} ({disease_name})', 'success')
             
             return render_template('prediction.html', 
                                 name=name, 
@@ -278,19 +341,74 @@ def process_image():
                                 prediction=prediction_result, 
                                 disease_name=disease_name,
                                 confidence=confidence_str)
+                                
         except Exception as e:
             # Clean up temporary file in case of error
             if os.path.exists(temp_filepath):
                 os.unlink(temp_filepath)
-            return f"Error in prediction: {str(e)}", 500
+            print(f"❌ Error in prediction process: {str(e)}")
+            flash(f'Error processing image: {str(e)}', 'error')
+            return redirect(url_for('upload_image'), code=307)
 
-    return "Invalid file format", 400
+    else:
+        flash('Invalid file format. Please upload PNG, JPG, or JPEG files only.', 'error')
+        return redirect(url_for('upload_image'), code=307)
 
-# Clean up database connections when app exits
-@app.teardown_appcontext
-def close_db_pool(error):
-    if hasattr(app, 'connection_pool'):
-        connection_pool.closeall()
+# Database health check route
+@app.route('/health')
+def health_check():
+    """Check if database connection is working"""
+    try:
+        # Check if connection pool is available
+        if not connection_pool or connection_pool.closed:
+            return {'status': 'unhealthy', 'error': 'Connection pool is closed'}, 500
+            
+        conn = connection_pool.getconn()
+        with conn.cursor() as cursor:
+            cursor.execute('SELECT 1')
+            result = cursor.fetchone()
+        connection_pool.putconn(conn)
+        return {
+            'status': 'healthy',
+            'database': 'connected',
+            'cloudinary': 'configured' if os.getenv('CLOUDINARY_CLOUD_NAME') else 'not configured'
+        }
+    except Exception as e:
+        return {'status': 'unhealthy', 'error': str(e)}, 500
+
+# Test database connection route
+@app.route('/test-db')
+def test_db():
+    """Test database connection and show recent predictions"""
+    try:
+        predictions = get_predictions()
+        return {
+            'status': 'success',
+            'total_predictions': len(predictions),
+            'recent_predictions': predictions[:3] if predictions else []
+        }
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}, 500
+
+# Clean up database connections only when app exits (not on each request)
+import atexit
+
+def cleanup_connection_pool():
+    """Close connection pool when app shuts down"""
+    try:
+        if connection_pool:
+            connection_pool.closeall()
+            print("🔌 Database connection pool closed")
+    except:
+        pass
+
+# Register cleanup function to run when app exits
+atexit.register(cleanup_connection_pool)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Print startup information
+    print("🚀 Starting Flask Lung Disease Prediction App...")
+    print(f"📊 Database: {DB_HOST}")
+    print(f"☁️  Cloudinary: {'✅ Configured' if os.getenv('CLOUDINARY_CLOUD_NAME') else '❌ Not configured'}")
+    
+    app.run(debug=True, host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
