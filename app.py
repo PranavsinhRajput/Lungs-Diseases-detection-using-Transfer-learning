@@ -72,7 +72,7 @@ try:
         database=DB_NAME,
         user=DB_USER,
         password=DB_PASSWORD,
-        sslmode='require'  # Render requires SSL
+        #sslmode='require'  # Render requires SSL
     )
     print("✅ Successfully connected to Render PostgreSQL!")
 except Exception as e:
